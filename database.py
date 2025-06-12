@@ -4,10 +4,9 @@ import hashlib
 import streamlit as st
 from typing import Optional, List, Tuple
 
-
-# ✅ Use Streamlit secrets instead of os.getenv
+# ✅ Create a DB connection using Streamlit secrets
 def create_connection():
-    """Create and return a database connection."""
+    """Create and return a connection to the specific database."""
     try:
         connection = mysql.connector.connect(
             host=st.secrets["db_host"],
@@ -21,10 +20,11 @@ def create_connection():
         st.error(f"Database connection error: {e}")
         return None
 
+# ✅ Initialize database and tables
 def setup_database():
-    """Create database and tables if they don't exist."""
+    """Create database (if not exists) and required tables."""
     try:
-        # Connect without specifying database (for database creation)
+        # Connect to MySQL without selecting database
         connection = mysql.connector.connect(
             host=st.secrets["db_host"],
             user=st.secrets["db_user"],
@@ -33,44 +33,45 @@ def setup_database():
         )
         connection.autocommit = True
         cursor = connection.cursor()
-        cursor.execute("CREATE DATABASE IF NOT EXISTS password_manager_db;")
+        cursor.execute(f"CREATE DATABASE IF NOT EXISTS {st.secrets['db_name']};")
         cursor.close()
         connection.close()
 
-        # Connect to the database for tables creation
+        # Connect to newly created database to create tables
         conn = create_connection()
         if conn:
             cursor = conn.cursor()
             cursor.execute("""
-            CREATE TABLE IF NOT EXISTS users (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                username VARCHAR(255) UNIQUE NOT NULL,
-                password_hash VARCHAR(255) NOT NULL
-            );
+                CREATE TABLE IF NOT EXISTS users (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    username VARCHAR(255) UNIQUE NOT NULL,
+                    password_hash VARCHAR(255) NOT NULL
+                );
             """)
             cursor.execute("""
-            CREATE TABLE IF NOT EXISTS passwords (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id INT NOT NULL,
-                account_note VARCHAR(255),
-                password_value VARCHAR(255) NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-            );
+                CREATE TABLE IF NOT EXISTS passwords (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT NOT NULL,
+                    account_note VARCHAR(255),
+                    password_value VARCHAR(255) NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                );
             """)
             conn.commit()
             cursor.close()
             conn.close()
-        st.success("Database and tables are ready!")
+        st.success("✅ Database and tables are set up!")
     except Error as e:
-        st.error(f"Error setting up database: {e}")
+        st.error(f"Database setup failed: {e}")
 
+# ✅ Password hashing
 def hash_password(password: str) -> str:
-    """Hash password using SHA256 for secure storage."""
+    """Hash password using SHA256."""
     return hashlib.sha256(password.encode()).hexdigest()
 
+# ✅ Check if username exists
 def check_user_exists(username: str) -> bool:
-    """Check if a username already exists."""
     conn = create_connection()
     if conn:
         cursor = conn.cursor()
@@ -81,8 +82,8 @@ def check_user_exists(username: str) -> bool:
         return exists
     return False
 
+# ✅ Register a new user
 def register_user(username: str, password: str) -> bool:
-    """Register new user with hashed password."""
     if check_user_exists(username):
         return False
     conn = create_connection()
@@ -99,12 +100,11 @@ def register_user(username: str, password: str) -> bool:
             conn.close()
             return True
         except Error as e:
-            st.error(f"Registration error: {e}")
-            return False
+            st.error(f"Registration failed: {e}")
     return False
 
+# ✅ Login check
 def verify_login(username: str, password: str) -> Optional[int]:
-    """Verify user credentials and return user_id if valid, else None."""
     conn = create_connection()
     if conn:
         cursor = conn.cursor()
@@ -120,8 +120,8 @@ def verify_login(username: str, password: str) -> Optional[int]:
             return result[0]
     return None
 
+# ✅ Save user password to DB
 def save_password_to_db(user_id: int, password_value: str, account_note: str):
-    """Save generated password and note linked to a user."""
     conn = create_connection()
     if conn:
         cursor = conn.cursor()
@@ -133,8 +133,8 @@ def save_password_to_db(user_id: int, password_value: str, account_note: str):
         cursor.close()
         conn.close()
 
+# ✅ Get saved passwords
 def get_saved_passwords(user_id: int) -> List[Tuple[str, str, str]]:
-    """Retrieve saved passwords and notes for a user ordered by creation date descending."""
     conn = create_connection()
     if conn:
         cursor = conn.cursor()
