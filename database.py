@@ -4,15 +4,16 @@ import hashlib
 import streamlit as st
 from typing import Optional, List, Tuple
 
+# ✅ Use Streamlit secrets instead of os.getenv
 def create_connection():
     """Create and return a database connection."""
     try:
         connection = mysql.connector.connect(
-           host=os.getenv("db_host"),
-            user=os.getenv("db_user"),
-            password=os.getenv("db_password"),
-            database=os.getenv("db_name"),
-            port=int(os.getenv("db_port"))
+            host=st.secrets["db_host"],
+            user=st.secrets["db_user"],
+            password=st.secrets["db_password"],
+            database=st.secrets["db_name"],
+            port=int(st.secrets["db_port"])
         )
         return connection
     except Error as e:
@@ -24,9 +25,10 @@ def setup_database():
     try:
         # Connect without specifying database (for database creation)
         connection = mysql.connector.connect(
-            host=os.getenv("db_host"),
-            user=os.getenv("db_user"),
-            password=os.getenv("db_password")
+            host=st.secrets["db_host"],
+            user=st.secrets["db_user"],
+            password=st.secrets["db_password"],
+            port=int(st.secrets["db_port"])
         )
         connection.autocommit = True
         cursor = connection.cursor()
