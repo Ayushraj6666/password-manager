@@ -4,6 +4,7 @@ import hashlib
 import streamlit as st
 from typing import Optional, List, Tuple
 
+
 # ✅ Use Streamlit secrets instead of os.getenv
 def create_connection():
     """Create and return a database connection."""
